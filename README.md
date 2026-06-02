@@ -1,1 +1,1 @@
-# -Jellyfin-VideoOSD-CustomPlaybackSpeed-Buttons
+Jellyfin-VideoOSD-CustomPlaybackSpeed-Buttons
