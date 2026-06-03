@@ -1,3 +1,7 @@
+Overview of all my Jellyfin Web Video OSD projects: [Jellyfin-VideoOSD-Projects-Overview](https://github.com/chrissix666/Jellyfin-VideoOSD-Projects-Overview)
+
+---
+
 Note: This script is compatible with the [Jellyfin-VideoOSD-CustomPlaybackSpeed-Menu](https://github.com/chrissix666/Jellyfin-VideoOSD-CustomPlaybackSpeed-Menu).  
 If the Custom Playback Speed Menu is installed, this script uses its configured speed values automatically. If it is not installed, this script falls back to the Jellyfin vanilla playback speed values.
 
