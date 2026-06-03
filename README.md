@@ -69,11 +69,11 @@ Default fallback speeds:
 
 3. Optional: Install the Custom Playback Speed Menu script if you want to define your own speed values.
 
-4. Optional: Install the Custom On/Off Menu script if you want to toggle this script directly from the VideoOSD submenu.
+4. Optional: Install the Custom On/Off Menu script if you want to toggle this script directly from the video playback submenu.
 
 5. Save and reload Jellyfin Web.
 
-6. Start video playback and open the VideoOSD.
+6. Start video playback.
 
 ---
 
