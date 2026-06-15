@@ -91,12 +91,31 @@
         const video = getVideo();
         const field = getSpeedField();
 
-        if (!video || !field) return;
+        if (!field) return;
 
-        field.value = video.playbackRate + 'x';
+        const storedRate = Number(sessionStorage.getItem('playbackRateSpeed'));
+
+        const rate = (
+            video &&
+            video.playbackRate !== 1
+        )
+            ? video.playbackRate
+            : (
+                !Number.isNaN(storedRate) &&
+                storedRate >= 0.0625 &&
+                storedRate <= 16
+            )
+                ? storedRate
+                : video
+                    ? video.playbackRate
+                    : 1;
+
+        field.value = rate + 'x';
     }
 
     function setSpeed(rate) {
+        sessionStorage.setItem('playbackRateSpeed', String(rate));
+
         getVideos().forEach(video => {
             video.playbackRate = rate;
         });
