@@ -391,16 +391,33 @@
     // above). When the configured gap is 0 (the default), this clears any
     // inline override so the plain CSS-class baseline margin applies,
     // exactly like before this retrofit.
+    // FIX for a real, confirmed inconsistency found live: same issue as
+    // in the FrameByFrame script (see its own comment for the full
+    // explanation) -- this only ever set margin on the CONTAINER, while
+    // the individual buttons inside carry their own native margin from
+    // the "paper-icon-button-light" class, unaffected by it. Fixed the
+    // same way: override the actual first/last button's own outer-facing
+    // margin directly.
+    // FIX, corrected after direct discussion with the user and
+    // confirmed against the real source: "gap 0" should mean "looks
+    // exactly like a native button", not "touching, 0px". Confirmed
+    // directly against the real native buttons in the same row: they
+    // are NOT flush against each other, each carries "margin: 0 0.29em"
+    // (from "paper-icon-button-light"), and ".videoOsdBottom .buttons"
+    // has no "gap" property of its own, so per-button margin is the
+    // ONLY spacing mechanism, and two adjacent native margins combine to
+    // ~0.58em visible gap. Native 0.29em is now the baseline here too,
+    // with the user's own configured gap value added on top.
     function applySpacing(container) {
         const gapEm = CONFIG.centeredGapEm || 0;
-        if (gapEm <= 0) {
-            container.style.marginLeft = '';
-            container.style.marginRight = '';
-            return;
-        }
-        const baseMarginEm = 0.25;
-        container.style.marginLeft = (baseMarginEm + gapEm) + 'em';
-        container.style.marginRight = (baseMarginEm + gapEm) + 'em';
+        const NATIVE_BUTTON_MARGIN_EM = 0.29;
+        const buttons = container.querySelectorAll('.' + BUTTON_CLASS);
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        container.style.marginLeft = '';
+        container.style.marginRight = '';
+        if (first) first.style.marginLeft = (NATIVE_BUTTON_MARGIN_EM + gapEm) + 'em';
+        if (last) last.style.marginRight = (NATIVE_BUTTON_MARGIN_EM + gapEm) + 'em';
     }
 
     function bindRateChange(video) {
