@@ -32,14 +32,20 @@
     };
 
     async function fetchPluginConfig() {
-        if (!window.ApiClient || typeof ApiClient.getPluginConfiguration !== 'function') {
-            return null;
+        const maxAttempts = 120;
+        const delayMs = 250;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            if (window.ApiClient && typeof ApiClient.getPluginConfiguration === 'function') {
+                try {
+                    const config = await ApiClient.getPluginConfiguration(PLUGIN_GUID);
+                    if (config) return config;
+                } catch (err) {
+                    // fall through, try again after the delay below
+                }
+            }
+            await new Promise(function (resolve) { setTimeout(resolve, delayMs); });
         }
-        try {
-            return await ApiClient.getPluginConfiguration(PLUGIN_GUID);
-        } catch (err) {
-            return null;
-        }
+        return null;
     }
 
     function applyPluginConfig(pluginConfig) {
@@ -279,17 +285,40 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                width: 13.4em;
-                min-width: 13.4em;
-                max-width: 13.4em;
+                // FIX for a real, confirmed bug found live, verified with
+                // an actual measured browser render: this container was
+                // hardcoded to 13.4em wide, but its actual content (one
+                // 3.2em button + one 3.8em field + one 3.2em button =
+                // 10.2em) only fills 10.2em of it. With
+                // "justify-content: center", the leftover 3.2em split
+                // evenly into an invisible 1.6em (25.6px) of phantom
+                // padding on EACH side, inside the container, completely
+                // hidden from and uncontrolled by applySpacing()'s own
+                // margin logic on the actual first/last buttons. Fixed
+                // to the real, correct total (10.2em), which leaves zero
+                // leftover space to hide in.
+                width: 10.2em;
+                min-width: 10.2em;
+                max-width: 10.2em;
                 height: 0;
                 min-height: 0;
                 max-height: 0;
-                margin-left: .25em;
-                margin-right: .25em;
+                // FIX for a real, confirmed bug found live: this used to
+                // hardcode "margin-left/right: .25em" here, completely
+                // independent of applySpacing()'s own margin logic on
+                // the individual first/last buttons. applySpacing()
+                // clearing the CONTAINER's own inline margin style only
+                // removes an inline override, it can't touch this CSS
+                // class rule, so this fixed .25em was silently adding on
+                // top of whatever applySpacing() computed, on both
+                // sides, all the time, regardless of the configured gap.
+                // Removed entirely: applySpacing() is now the single,
+                // sole source of truth for this container's spacing.
+                margin-left: 0;
+                margin-right: 0;
                 padding: 0;
                 overflow: visible;
-                flex: 0 0 13.4em;
+                flex: 0 0 10.2em;
                 vertical-align: middle;
             }
 
@@ -386,11 +415,6 @@
         document.head.appendChild(style);
     }
 
-    // New: applies the General/Individual Centered Gap on top of the
-    // container's existing baseline .25em margin (from injectStyle()
-    // above). When the configured gap is 0 (the default), this clears any
-    // inline override so the plain CSS-class baseline margin applies,
-    // exactly like before this retrofit.
     // FIX for a real, confirmed inconsistency found live: same issue as
     // in the FrameByFrame script (see its own comment for the full
     // explanation) -- this only ever set margin on the CONTAINER, while
