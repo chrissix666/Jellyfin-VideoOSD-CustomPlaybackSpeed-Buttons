@@ -1,6 +1,60 @@
 (function () {
     'use strict';
 
+    // ---- PLUGIN ADAPTER: config source, retrofit for VideoOSD Tweaks and Candy ----
+    const PLUGIN_GUID = '468b1980-7a6c-4e45-a129-24825085ece4';
+
+    const CONFIG = {
+        // ============================================================
+        // == SHARED VALUE (both standalone and plugin usage) ==
+        // Standalone: this mod never had a "hide on narrow window"
+        // setting before this retrofit at all, only a permanently
+        // fixed CSS media rule -- true here reproduces that exact
+        // original always-on behavior.
+        // Plugin: overwritten by applyPluginConfig() with the
+        // admin's "Hide on Narrow Window" setting once fetched.
+        // ============================================================
+        hideOnNarrowWindow: true,
+
+        // ============================================================
+        // == SHARED VALUE, correct for both cases here ==
+        // This mod never had ANY configurable spacing before this
+        // retrofit, only a permanently fixed .25em CSS margin (see
+        // applySpacing() below). 0 is correct as both the standalone
+        // default (produces an empty inline style, so the plain CSS
+        // .25em rule applies untouched, exactly like before) and the
+        // plugin's own "opt-in, not opt-out" baseline. Unlike
+        // A-B-Loop, no dual-mode branch is needed here, there was no
+        // pre-existing visible behavior at a nonzero default to
+        // preserve.
+        // ============================================================
+        centeredGapEm: 0
+    };
+
+    async function fetchPluginConfig() {
+        if (!window.ApiClient || typeof ApiClient.getPluginConfiguration !== 'function') {
+            return null;
+        }
+        try {
+            return await ApiClient.getPluginConfiguration(PLUGIN_GUID);
+        } catch (err) {
+            return null;
+        }
+    }
+
+    function applyPluginConfig(pluginConfig) {
+        if (!pluginConfig) return;
+
+        if (typeof pluginConfig.SpeedHideOnNarrowWindow === 'boolean') {
+            CONFIG.hideOnNarrowWindow = pluginConfig.SpeedHideOnNarrowWindow;
+        }
+
+        CONFIG.centeredGapEm = pluginConfig.SpeedIndividualCenteredGapOverride
+            ? (Number(pluginConfig.SpeedCenteredGapValue) || 0)
+            : (Number(pluginConfig.GeneralCenteredGap) || 0);
+    }
+    // ---- END PLUGIN ADAPTER ----
+
     const FALLBACK_SPEEDS = [
         0.5,
         0.75,
@@ -28,6 +82,7 @@
     const FIELD_CLASS = 'jfb-speed-step-field';
     const CONTAINER_CLASS = 'jfb-speed-step-container';
     const STYLE_ID = 'jfb-speed-step-style';
+    const RESPONSIVE_STYLE_ID = 'jfb-speed-step-responsive-style';
 
     let enabled = false;
     let observer = null;
@@ -303,15 +358,49 @@
                 outline: 0;
                 box-shadow: none;
             }
-
-            @media all and (max-width: 50em) {
-                .videoOsdBottom .${CONTAINER_CLASS} {
-                    display: none !important;
-                }
-            }
         `;
+        // Note: the "@media (max-width: 50em) { display: none }" rule that
+        // used to live inline in this same stylesheet has been pulled out
+        // into its own separate, independently toggleable style tag, see
+        // refreshResponsiveStyle() below -- CONFIG.hideOnNarrowWindow can
+        // now be turned off via the plugin, which needs to be able to
+        // remove that rule without touching the rest of this styling.
 
         document.head.appendChild(style);
+    }
+
+    // New: previously this behavior was permanently baked into injectStyle()
+    // above with no way to turn it off. Same pattern used across the other
+    // retrofitted mods (see A-B-Loop) -- a separate, removable style tag
+    // driven by CONFIG.hideOnNarrowWindow.
+    function refreshResponsiveStyle() {
+        const existing = document.getElementById(RESPONSIVE_STYLE_ID);
+        if (!CONFIG.hideOnNarrowWindow) {
+            if (existing) existing.remove();
+            return;
+        }
+        if (existing) return;
+        const style = document.createElement('style');
+        style.id = RESPONSIVE_STYLE_ID;
+        style.textContent = `@media all and (max-width: 50em) { .videoOsdBottom .${CONTAINER_CLASS} { display: none !important; } }`;
+        document.head.appendChild(style);
+    }
+
+    // New: applies the General/Individual Centered Gap on top of the
+    // container's existing baseline .25em margin (from injectStyle()
+    // above). When the configured gap is 0 (the default), this clears any
+    // inline override so the plain CSS-class baseline margin applies,
+    // exactly like before this retrofit.
+    function applySpacing(container) {
+        const gapEm = CONFIG.centeredGapEm || 0;
+        if (gapEm <= 0) {
+            container.style.marginLeft = '';
+            container.style.marginRight = '';
+            return;
+        }
+        const baseMarginEm = 0.25;
+        container.style.marginLeft = (baseMarginEm + gapEm) + 'em';
+        container.style.marginRight = (baseMarginEm + gapEm) + 'em';
     }
 
     function bindRateChange(video) {
@@ -344,6 +433,7 @@
         }
 
         injectStyle();
+        refreshResponsiveStyle();
 
         const container = document.createElement('div');
         container.className = CONTAINER_CLASS;
@@ -363,6 +453,7 @@
         ));
 
         transportBar.insertAdjacentElement('afterend', container);
+        applySpacing(container);
 
         updateSpeedField();
 
@@ -492,4 +583,13 @@
             once: true
         });
     }
+
+    // ---- PLUGIN ADAPTER: apply fetched config once it arrives ----
+    fetchPluginConfig().then(function (pluginConfig) {
+        applyPluginConfig(pluginConfig);
+        refreshResponsiveStyle();
+        const container = document.querySelector('.' + CONTAINER_CLASS);
+        if (container) applySpacing(container);
+    });
+    // ---- END PLUGIN ADAPTER ----
 })();
