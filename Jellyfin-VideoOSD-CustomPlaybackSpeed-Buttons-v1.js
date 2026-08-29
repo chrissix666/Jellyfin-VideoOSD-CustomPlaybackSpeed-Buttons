@@ -329,8 +329,16 @@
         // hardcoded to 3.2em boxes, so their hover disc rendered
         // visibly larger than every native neighbor. Resized to the
         // native-derived 2.7816em (1.66956521739 + 2 x 0.556), and the
-        // container total below follows the same math:
-        // 2 x 2.7816em buttons + 3.8em field = 9.3632em.
+        // container total below follows the same math, INCLUDING the
+        // buttons' own native class margins (0.29em per side from
+        // "paper-icon-button-light" -- forgetting these was a real,
+        // user-visible bug: the content was 1.16em wider than the
+        // container, and with "justify-content: center" plus
+        // "overflow: visible" the outer buttons protruded 0.58em past
+        // each container edge straight into the neighboring elements,
+        // confirmed live by the user's screenshot as all three customs
+        // visibly overlapping): 2 x (0.29 + 2.7816 + 0.29) buttons
+        // + 3.8em field = 10.5232em, zero leftover, zero overflow.
         // The container's fixed width itself stays (deliberate earlier
         // fix against phantom inner padding, see below) -- only the
         // numbers changed.
@@ -355,9 +363,9 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                width: 9.3632em;
-                min-width: 9.3632em;
-                max-width: 9.3632em;
+                width: 10.5232em;
+                min-width: 10.5232em;
+                max-width: 10.5232em;
                 height: 0;
                 min-height: 0;
                 max-height: 0;
@@ -365,7 +373,7 @@
                 margin-right: 0;
                 padding: 0;
                 overflow: visible;
-                flex: 0 0 9.3632em;
+                flex: 0 0 10.5232em;
                 vertical-align: middle;
             }
 
