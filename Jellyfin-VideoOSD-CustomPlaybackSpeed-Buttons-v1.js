@@ -183,7 +183,6 @@
 
         updateSpeedField();
 
-        console.log('[Jellyfin Speed Buttons] Speed set:', rate);
     }
 
     function resetSpeed() {
@@ -592,7 +591,6 @@
 
         updateSpeedField();
 
-        console.log('[Jellyfin Speed Buttons] Buttons inserted.');
     }
 
     function startObserver() {
@@ -623,7 +621,6 @@
         startObserver();
         injectButtons();
 
-        console.log('[Jellyfin Speed Buttons] Enabled.');
     }
 
     function disable() {
@@ -631,7 +628,6 @@
         stopObserver();
         removeButtons();
 
-        console.log('[Jellyfin Speed Buttons] Disabled.');
     }
 
     function tryRegisterWithCustoms() {
@@ -674,7 +670,6 @@
             enable();
         }
 
-        console.log('[Jellyfin Speed Buttons] Registered with Customs.');
 
         return true;
     }
@@ -708,7 +703,7 @@
 
         startCustomsRegistrationWatcher();
 
-        console.log('[Jellyfin Speed Buttons] Script loaded.');
+        console.log('[VideoOSD Speed Buttons] Script loaded.');
     }
 
     if (document.documentElement) {
@@ -725,6 +720,8 @@
         refreshResponsiveStyle();
         const container = document.querySelector('.' + CONTAINER_CLASS);
         if (container) applySpacing(container);
+    }).catch(function (err) {
+        console.error('[VideoOSD Speed Buttons] config apply failed:', err);
     });
     // ---- END PLUGIN ADAPTER ----
 })();
