@@ -277,6 +277,41 @@
     function injectStyle() {
         if (document.getElementById(STYLE_ID)) return;
 
+        // FIX for a real, confirmed bug found live, verified with an
+        // actual measured browser render: this container was hardcoded
+        // to 13.4em wide, but its actual content (one 3.2em button + one
+        // 3.8em field + one 3.2em button = 10.2em) only fills 10.2em of
+        // it. With "justify-content: center", the leftover 3.2em split
+        // evenly into an invisible 1.6em (25.6px) of phantom padding on
+        // EACH side, inside the container, completely hidden from and
+        // uncontrolled by applySpacing()'s own margin logic on the
+        // actual first/last buttons. Fixed to the real, correct total
+        // (10.2em), which leaves zero leftover space to hide in.
+        //
+        // FIX for a second, real, confirmed bug found live: this used to
+        // also hardcode "margin-left/right: .25em" here, completely
+        // independent of applySpacing()'s own margin logic on the
+        // individual first/last buttons. applySpacing() clearing the
+        // CONTAINER's own inline margin style only removes an inline
+        // override, it can't touch this CSS class rule, so this fixed
+        // .25em was silently adding on top of whatever applySpacing()
+        // computed, on both sides, all the time, regardless of the
+        // configured gap. Removed entirely: applySpacing() is now the
+        // single, sole source of truth for this container's spacing.
+        //
+        // FIX for a third, real, more fundamental bug found live during
+        // a later, more thorough review: the two explanations above used
+        // to live as "//" comments INSIDE the CSS text below (i.e.
+        // actually part of style.textContent, not real JavaScript
+        // comments), which is invalid CSS syntax, confirmed with an
+        // actual browser render: a "//" line inside a CSS rule silently
+        // drops at least the following declaration, meaning the very
+        // "width: 10.2em"/"margin-left: 0" fixes those comments were
+        // documenting had a real chance of never actually taking effect
+        // in a real browser, entirely undetected by earlier tests, since
+        // those only checked DOM ordering, not the actual rendered CSS
+        // width. Moved out here as genuine JS comments, the CSS text
+        // below is now valid.
         const style = document.createElement('style');
         style.id = STYLE_ID;
         style.textContent = `
@@ -285,35 +320,12 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                // FIX for a real, confirmed bug found live, verified with
-                // an actual measured browser render: this container was
-                // hardcoded to 13.4em wide, but its actual content (one
-                // 3.2em button + one 3.8em field + one 3.2em button =
-                // 10.2em) only fills 10.2em of it. With
-                // "justify-content: center", the leftover 3.2em split
-                // evenly into an invisible 1.6em (25.6px) of phantom
-                // padding on EACH side, inside the container, completely
-                // hidden from and uncontrolled by applySpacing()'s own
-                // margin logic on the actual first/last buttons. Fixed
-                // to the real, correct total (10.2em), which leaves zero
-                // leftover space to hide in.
                 width: 10.2em;
                 min-width: 10.2em;
                 max-width: 10.2em;
                 height: 0;
                 min-height: 0;
                 max-height: 0;
-                // FIX for a real, confirmed bug found live: this used to
-                // hardcode "margin-left/right: .25em" here, completely
-                // independent of applySpacing()'s own margin logic on
-                // the individual first/last buttons. applySpacing()
-                // clearing the CONTAINER's own inline margin style only
-                // removes an inline override, it can't touch this CSS
-                // class rule, so this fixed .25em was silently adding on
-                // top of whatever applySpacing() computed, on both
-                // sides, all the time, regardless of the configured gap.
-                // Removed entirely: applySpacing() is now the single,
-                // sole source of truth for this container's spacing.
                 margin-left: 0;
                 margin-right: 0;
                 padding: 0;
@@ -415,23 +427,21 @@
         document.head.appendChild(style);
     }
 
-    // FIX for a real, confirmed inconsistency found live: same issue as
-    // in the FrameByFrame script (see its own comment for the full
-    // explanation) -- this only ever set margin on the CONTAINER, while
-    // the individual buttons inside carry their own native margin from
-    // the "paper-icon-button-light" class, unaffected by it. Fixed the
-    // same way: override the actual first/last button's own outer-facing
-    // margin directly.
-    // FIX, corrected after direct discussion with the user and
-    // confirmed against the real source: "gap 0" should mean "looks
-    // exactly like a native button", not "touching, 0px". Confirmed
-    // directly against the real native buttons in the same row: they
-    // are NOT flush against each other, each carries "margin: 0 0.29em"
-    // (from "paper-icon-button-light"), and ".videoOsdBottom .buttons"
-    // has no "gap" property of its own, so per-button margin is the
-    // ONLY spacing mechanism, and two adjacent native margins combine to
-    // ~0.58em visible gap. Native 0.29em is now the baseline here too,
-    // with the user's own configured gap value added on top.
+    // FIX for 2 real, confirmed issues found live, in sequence:
+    // 1) This originally only set margin on the CONTAINER, while the
+    //    individual buttons inside carry their own native margin from
+    //    "paper-icon-button-light", unaffected by the container's own
+    //    margin. Fixed by overriding the actual first/last button's own
+    //    outer-facing margin directly instead.
+    // 2) That first fix initially zeroed the margin at "gap 0", but per
+    //    direct discussion with the user and confirmed against the real
+    //    source, "gap 0" should mean "looks exactly like a native
+    //    button", not "touching, 0px": native buttons are NOT flush
+    //    against each other (each carries "margin: 0 0.29em" from
+    //    "paper-icon-button-light", and ".videoOsdBottom .buttons" has
+    //    no "gap" property of its own, so per-button margin is the ONLY
+    //    spacing mechanism). Native 0.29em is now the baseline, with the
+    //    user's own configured gap value added on top.
     function applySpacing(container) {
         const gapEm = CONFIG.centeredGapEm || 0;
         const NATIVE_BUTTON_MARGIN_EM = 0.29;
@@ -467,8 +477,26 @@
 
         bindRateChange(video);
 
-        const parent = transportBar.parentElement;
-        if (!parent || parent.querySelector('.' + CONTAINER_CLASS)) {
+        // FIX for a real, serious bug found live, only caught via a
+        // fully faithful test (the real script, the real Jellyfin HTML,
+        // a real browser -- a simplified stand-in test never would have
+        // caught this): this used to check transportBar.parentElement
+        // and insert via "insertAdjacentElement('afterend', container)"
+        // relative to transportBar itself, which inserts as a SIBLING of
+        // transportBar (i.e. one level OUTSIDE it, alongside
+        // ".buttons.focuscontainer-x" itself), not inside it. ABLoop's
+        // own script, by contrast, inserts relative to the last vanilla
+        // button (which genuinely IS inside transportBar), ending up
+        // one level deeper than Speed/FrameByFrame did. Confirmed live:
+        // Core's own sort logic (applyBottomLeftOrder() in the Core
+        // script) only ever looks inside transportBar for these 3
+        // items, so it could never even find this container at all,
+        // silently failing to include it in any configured sort order.
+        // Fixed to insert inside transportBar (appendChild, alongside
+        // the vanilla buttons and ABLoop's own button), consistent with
+        // where Core's sort logic actually looks, and with how ABLoop
+        // itself already correctly does this.
+        if (transportBar.querySelector('.' + CONTAINER_CLASS)) {
             updateSpeedField();
             return;
         }
@@ -493,7 +521,7 @@
             1
         ));
 
-        transportBar.insertAdjacentElement('afterend', container);
+        transportBar.appendChild(container);
         applySpacing(container);
 
         updateSpeedField();
