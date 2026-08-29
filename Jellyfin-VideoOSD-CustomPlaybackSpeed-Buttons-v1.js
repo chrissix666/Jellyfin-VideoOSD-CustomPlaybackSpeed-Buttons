@@ -250,8 +250,8 @@
         input.value = '1x';
         input.readOnly = true;
         input.tabIndex = -1;
-        input.title = 'Reset speed to 1x';
-        input.setAttribute('aria-label', 'Reset speed to 1x');
+        input.title = 'Reset speed';
+        input.setAttribute('aria-label', 'Reset speed');
 
         [
             'pointerdown',
@@ -575,7 +575,7 @@
 
         container.appendChild(createButton(
             'keyboard_double_arrow_left',
-            'One speed step slower',
+            'Decrease speed',
             -1
         ));
 
@@ -583,7 +583,7 @@
 
         container.appendChild(createButton(
             'keyboard_double_arrow_right',
-            'One speed step faster',
+            'Increase speed',
             1
         ));
 
