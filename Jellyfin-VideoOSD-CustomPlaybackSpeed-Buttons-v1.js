@@ -122,11 +122,11 @@
     }
 
     function getTransportBar() {
-        return document.querySelector('.buttons.focuscontainer-x > div[dir="ltr"]');
+        return document.querySelector('#videoOsdPage:not(.hide) .buttons.focuscontainer-x > div[dir="ltr"]');
     }
 
     function getSpeedField() {
-        return document.querySelector('.' + FIELD_CLASS);
+        return document.querySelector('#videoOsdPage:not(.hide) .' + FIELD_CLASS);
     }
 
     function getSpeeds() {
