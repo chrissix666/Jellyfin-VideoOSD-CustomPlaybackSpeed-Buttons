@@ -35,11 +35,38 @@
         const maxAttempts = 120;
         const delayMs = 250;
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            // No ApiClient yet (jellyfin-web creates it once a server is
+            // known, e.g. after the server selection page): wait without
+            // using up an attempt, like the not-logged-in case below.
+            if (!window.ApiClient) attempt--;
             if (window.ApiClient && typeof ApiClient.getPluginConfiguration === 'function') {
+                // Not logged in yet (e.g. still on the login page): every
+                // request would only fail with 401, so wait without using up
+                // an attempt (the whole budget used to run out right there).
+                if (typeof ApiClient.accessToken === 'function' && !ApiClient.accessToken()) {
+                    attempt--;
+                    await new Promise(function (resolve) { setTimeout(resolve, delayMs); });
+                    continue;
+                }
                 try {
-                    const config = await ApiClient.getPluginConfiguration(PLUGIN_GUID);
+                    // The plugin's own endpoint (1.0.1.0+) is readable for every
+                    // signed-in user; Jellyfin's plugin configuration endpoint
+                    // is admin-only. Older plugin versions answer 404 there, then
+                    // the admin-only endpoint is used as before.
+                    let config;
+                    try {
+                        config = await ApiClient.getJSON(ApiClient.getUrl('VideoOSDTweaksCandy/ClientConfiguration'));
+                    } catch (endpointErr) {
+                        if (!(endpointErr && endpointErr.status === 404)) throw endpointErr;
+                        config = await ApiClient.getPluginConfiguration(PLUGIN_GUID);
+                    }
                     if (config) return config;
                 } catch (err) {
+                    // 403: the configuration endpoint is admin-only; 404: plugin
+                    // not installed (standalone use). Retrying can't change
+                    // either, so stop and use the defaults instead of sending
+                    // up to 120 failing requests.
+                    if (err && (err.status === 403 || err.status === 404)) return null;
                     // fall through, try again after the delay below
                 }
             }
