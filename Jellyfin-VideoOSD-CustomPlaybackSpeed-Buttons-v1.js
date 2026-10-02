@@ -233,6 +233,69 @@
         setSpeed(next);
     }
 
+    // ============================================================
+    // KEYBOARD SPEED STEPS (same block in Speed-Menu.js)
+    // ============================================================
+    // Jellyfin's own speed keys (10.10: ">" / "<", 12.1: Shift + the
+    // Period / Comma key) step through Jellyfin's built-in rates only, and
+    // from any rate missing there (custom 0.33x, 5x, ...) they jump to its
+    // first entry, 0.5x. Jellyfin calls preventDefault() on every key it
+    // handles, so right after it (window, bubble phase) the step is redone
+    // through the custom list: the next rate above / below the one before
+    // the key, staying put at the ends like Jellyfin. Which keys count is
+    // left to the running Jellyfin version; no key is added. Installed
+    // once, by whichever speed addon loads first.
+    function installSpeedKeys(getList) {
+        if (window.JellyfinVideoOSDSpeedKeys) return;
+        window.JellyfinVideoOSDSpeedKeys = true;
+
+        const EPS = 0.0001;
+        let rateBefore = null;
+
+        window.addEventListener('keydown', () => {
+            const video = document.querySelector('video');
+            rateBefore = video ? video.playbackRate : null;
+        }, true);
+
+        window.addEventListener('keydown', e => {
+            const before = rateBefore;
+            rateBefore = null;
+
+            if (before === null || !e.defaultPrevented || e.ctrlKey || e.altKey || e.metaKey) return;
+
+            const up = e.key === '>' || (e.shiftKey && e.code === 'Period');
+            const down = e.key === '<' || (e.shiftKey && e.code === 'Comma');
+            if (up === down) return;
+            if (!document.querySelector('#videoOsdPage:not(.hide)')) return;
+
+            const list = getList();
+            if (!list.length) return;
+
+            // No nullish coalescing: these scripts also run on older TV browsers.
+            const found = up
+                ? list.find(v => v > before + EPS)
+                : [...list].reverse().find(v => v < before - EPS);
+            const next = found !== undefined ? found : before;
+
+            const videos = [...document.querySelectorAll('video')];
+            if (!videos.length || Math.abs(videos[0].playbackRate - next) < EPS) return;
+
+            videos.forEach(video => {
+                video.playbackRate = next;
+            });
+            try {
+                // Jellyfin keeps the speed for the next item from here.
+                sessionStorage.setItem('playbackRateSpeed', String(next));
+            } catch (err) {
+                /* storage unavailable: speed applies to this item only */
+            }
+        });
+    }
+
+    // Custom speeds count while these buttons are on, or whenever the
+    // speed menu (which owns the shared list) is loaded.
+    installSpeedKeys(() => (window.JellyfinCustomPlaybackSpeed || enabled) ? getSpeeds() : []);
+
     function createButton(icon, title, direction) {
         const button = document.createElement('button');
 
