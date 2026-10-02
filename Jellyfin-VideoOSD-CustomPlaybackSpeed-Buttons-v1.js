@@ -338,7 +338,12 @@
         input.className = FIELD_CLASS;
         input.value = '1x';
         input.readOnly = true;
-        input.tabIndex = -1;
+        // TV layout: the remote's D-pad only reaches focusable elements
+        // (Jellyfin's focusManager skips tabindex -1), so the field takes
+        // focus there and Enter resets the speed; arrow keys pass on to
+        // the D-pad navigation. Elsewhere it stays out of the tab order.
+        const tvLayout = document.documentElement.classList.contains('layout-tv');
+        input.tabIndex = tvLayout ? 0 : -1;
         input.title = 'Reset speed';
         input.setAttribute('aria-label', 'Reset speed');
 
@@ -349,11 +354,32 @@
             'mouseup',
             'touchstart',
             'touchend',
-            'dblclick',
-            'keydown'
+            'dblclick'
         ].forEach(type => {
             input.addEventListener(type, stop, true);
         });
+
+        input.addEventListener('keydown', function (e) {
+            if (!tvLayout) {
+                stop(e);
+                return;
+            }
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                stop(e);
+                resetSpeed();
+                return;
+            }
+            // Jellyfin's D-pad navigation leaves left/right to a text
+            // input (caret), so the field passes them to its neighbours
+            // (the − and + buttons) itself.
+            const neighbour = e.key === 'ArrowRight' ? input.nextElementSibling
+                : e.key === 'ArrowLeft' ? input.previousElementSibling
+                    : null;
+            if (neighbour && typeof neighbour.focus === 'function') {
+                stop(e);
+                neighbour.focus();
+            }
+        }, true);
 
         input.addEventListener('click', function (e) {
             stop(e);
