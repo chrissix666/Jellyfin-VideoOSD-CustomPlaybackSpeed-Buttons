@@ -18,7 +18,7 @@ Adds custom playback speed buttons to the **Jellyfin Web VideoOSD**, letting you
 This script adds quick speed step controls directly into the VideoOSD transport bar.  
 It can use custom speed values from the Custom Playback Speed Menu script if available, or fall back to Jellyfin’s default playback speed values.
 
-Tested on & Requirements: Windows 11, Chrome, Jellyfin Web 10.10.7, JavaScript Injector.
+Tested on & Requirements: Windows 11, Chrome, Jellyfin Web 10.10.7 and 12.0+, JavaScript Injector.
 
 <img src="Screenshot.png" width="300">
 
@@ -96,7 +96,7 @@ Default fallback speeds:
 
 ## Tested On
 
-- Jellyfin Web 10.10.7
+- Jellyfin Web 10.10.7 and 12.0+
 - Google Chrome
 - Windows 11
 
