@@ -34,6 +34,9 @@
         const maxAttempts = 120;
         const delayMs = 250;
         let failures = 0;
+        // Declared outside the loop: a function created inside it that reads
+        // 'failures' makes linters (JavaScript Injector's editor) warn.
+        function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
             // No ApiClient yet (jellyfin-web creates it once a server is
             // known, e.g. after the server selection page): wait without
@@ -45,7 +48,7 @@
                 // an attempt (the whole budget used to run out right there).
                 if (typeof ApiClient.accessToken === 'function' && !ApiClient.accessToken()) {
                     attempt--;
-                    await new Promise(function (resolve) { setTimeout(resolve, delayMs); });
+                    await wait(delayMs);
                     continue;
                 }
                 try {
@@ -63,11 +66,11 @@
                     // retries, 0.5 / 1 / 2 s apart, then the defaults until the next
                     // fetch (this used to send up to 120 requests in 30 s).
                     if (++failures > 3) return null;
-                    await new Promise(function (resolve) { setTimeout(resolve, delayMs * Math.pow(2, failures)); });
+                    await wait(delayMs * Math.pow(2, failures));
                     continue;
                 }
             }
-            await new Promise(function (resolve) { setTimeout(resolve, delayMs); });
+            await wait(delayMs);
         }
         return null;
     }
